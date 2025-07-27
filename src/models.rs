@@ -28,8 +28,8 @@ pub struct CreatePost {
 
 #[derive(Serialize, Deserialize)]
 pub struct UpdatePost {
-    pub title: String,
-    pub body: String,
+    pub title: Option<String>,
+    pub body: Option<String>,
 }
 
 #[derive(Serialize)]
