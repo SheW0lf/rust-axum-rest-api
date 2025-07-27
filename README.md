@@ -8,7 +8,7 @@ A fun test project exploring Rust web development with the Axum framework. This 
 ## Features
 
 - **Fast & Efficient**: Built with Rust and Axum for exceptional performance
-- **Database Integration**: SQLite with SQLx for type-safe database operations
+- **Database Integration**: PostgreSQL with SQLx for type-safe database operations
 - **Migration System**: Database schema management with SQLx migrations
 - **Docker Support**: Containerized deployment with Docker Compose
 - **Modern Tooling**: Justfile for common development tasks
@@ -17,7 +17,7 @@ A fun test project exploring Rust web development with the Axum framework. This 
 ## Tech Stack
 
 - **Framework**: [Axum](https://github.com/tokio-rs/axum) - Fast, ergonomic web framework
-- **Database**: SQLite with [SQLx](https://github.com/launchbadge/sqlx) - Async SQL toolkit
+- **Database**: PostgreSQL with [SQLx](https://github.com/launchbadge/sqlx) - Async SQL toolkit
 - **Runtime**: [Tokio](https://tokio.rs/) - Async runtime
 - **Serialization**: [Serde](https://serde.rs/) - Serialization framework
 - **Containerization**: Docker & Docker Compose
