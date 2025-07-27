@@ -89,7 +89,14 @@ migrate-add migration_name:
 query:
     sqlx query
 
-# Full database setup (create + migrate)
+# Database seeding
+seed:
+    @echo "Running SQL seed files..."
+    @psql postgresql://postgres:password@localhost:5432/rust-axum-rest-api -f seeds/01_users.sql
+    @psql postgresql://postgres:password@localhost:5432/rust-axum-rest-api -f seeds/02_posts.sql
+
+# Full database setup (create + migrate + seed)
 setup: db-up
     sqlx database create
-    sqlx migrate run 
+    sqlx migrate run
+    just seed 
