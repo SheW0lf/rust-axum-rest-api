@@ -34,7 +34,7 @@ async fn main() -> Result<(), sqlx::Error> {
     let pool: sqlx::Pool<sqlx::Postgres> = PgPoolOptions::new().connect(&database_url).await.expect("Failed to connect to the database");
     info!("Connected to the database");
     
-    let app: Router = Router::new().route("/", get(root)).merge(routes::posts_routes()).layer(Extension(pool));
+    let app: Router = Router::new().route("/", get(root)).merge(routes::posts::posts_routes()).layer(Extension(pool));
     
     let listener = tokio::net::TcpListener::bind("0.0.0.0:5000").await.unwrap();
     info!("Listening on http://0.0.0.0:5000");

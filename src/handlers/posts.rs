@@ -1,6 +1,6 @@
 use axum::{extract::{Extension, Path}, Json, http::StatusCode};
 use sqlx::PgPool;
-use crate::models::{Post, ErrorResponse, CreatePost, UpdatePost};
+use crate::models::{posts::{Post, CreatePost, UpdatePost}, ErrorResponse};
 
 pub async fn get_posts(Extension(pool): Extension<PgPool>) -> Result<Json<Vec<Post>>, (StatusCode, Json<ErrorResponse>)> {
     let posts = sqlx::query_as!(Post, "SELECT * FROM posts")

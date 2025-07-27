@@ -11,14 +11,6 @@ pub struct Post {
     pub created_at: NaiveDateTime,
 }
 
-#[derive(Serialize, Deserialize, FromRow)]
-pub struct User {
-    pub id: i32,
-    pub username: String,
-    pub email: String,
-    pub created_at: NaiveDateTime,
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct CreatePost {
     pub title: String,
@@ -30,11 +22,4 @@ pub struct CreatePost {
 pub struct UpdatePost {
     pub title: Option<String>,
     pub body: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct ErrorResponse {
-    pub error: String,
-    pub message: String,
-    pub details: Option<String>,
 }

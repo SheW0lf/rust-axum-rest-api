@@ -1,5 +1,5 @@
 use axum::{routing::{get, post, put}, Router};
-use crate::handlers::{get_posts, get_post, create_post, update_post};
+use crate::handlers::posts::{get_posts, get_post, create_post, update_post};
 
 pub fn posts_routes() -> Router {
     Router::new()
