@@ -21,4 +21,3 @@ pub struct UpdateUser {
     pub username: Option<String>,
     pub email: Option<String>,
 }
-
