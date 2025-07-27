@@ -1,5 +1,5 @@
 use crate::models::{
-    ErrorResponse,
+    ErrorResponse, SuccessResponse,
     posts::{CreatePost, Post, UpdatePost},
 };
 use axum::{
@@ -119,4 +119,37 @@ pub async fn update_post(
         ?;
 
     Ok(Json(post))
+}
+
+pub async fn delete_post(
+    Extension(pool): Extension<PgPool>,
+    Path(id): Path<i32>,
+) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let result = sqlx::query!("DELETE FROM posts WHERE id = $1", id)
+        .execute(&pool)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Failed to delete post".to_string(),
+                    message: "Failed to delete post".to_string(),
+                    details: None,
+                }),
+            )
+        })?;
+
+    match result.rows_affected() {
+        0 => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Post not found".to_string(),
+                message: format!("Post with id {} not found", id),
+                details: None,
+            }),
+        )),
+        _ => Ok(Json(SuccessResponse {
+            message: format!("Post with id {} successfully deleted", id),
+        })),
+    }
 }

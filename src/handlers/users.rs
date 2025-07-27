@@ -1,5 +1,5 @@
 use crate::models::{
-    ErrorResponse,
+    ErrorResponse, SuccessResponse,
     users::{CreateUser, UpdateUser, User},
 };
 use axum::{
@@ -112,4 +112,37 @@ pub async fn update_user(
         ?;
 
     Ok(Json(user))
+}
+
+pub async fn delete_user(
+    Extension(pool): Extension<PgPool>,
+    Path(id): Path<i32>,
+) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let result = sqlx::query!("DELETE FROM users WHERE id = $1", id)
+        .execute(&pool)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Failed to delete user".to_string(),
+                    message: "Failed to delete user".to_string(),
+                    details: None,
+                }),
+            )
+        })?;
+
+    match result.rows_affected() {
+        0 => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "User not found".to_string(),
+                message: format!("User with id {} not found", id),
+                details: None,
+            }),
+        )),
+        _ => Ok(Json(SuccessResponse {
+            message: format!("User with id {} successfully deleted", id),
+        })),
+    }
 }

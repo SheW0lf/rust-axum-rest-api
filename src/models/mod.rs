@@ -7,5 +7,10 @@ pub struct ErrorResponse {
     pub details: Option<String>,
 }
 
+#[derive(Serialize)]
+pub struct SuccessResponse {
+    pub message: String,
+}
+
 pub mod posts;
 pub mod users;
