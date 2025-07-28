@@ -73,6 +73,53 @@ pub async fn get_post(
     }
 }
 
+async fn fetch_user_posts(
+    id: i32,
+    pool: &PgPool,
+) -> Result<Vec<Post>, (StatusCode, Json<ErrorResponse>)> {
+    let posts = sqlx::query_as!(Post, "SELECT * FROM posts WHERE user_id = $1", id)
+        .fetch_all(pool)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Failed to fetch user posts from database".to_string(),
+                    message: "Failed to fetch user posts from database".to_string(),
+                    details: None,
+                }),
+            )
+        })?;
+
+    match posts.len() {
+        0 => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "No posts found".to_string(),
+                message: "No posts found".to_string(),
+                details: None,
+            }),
+        )),
+        _ => Ok(posts),
+    }
+}
+
+pub async fn get_user_posts(
+    Path(id): Path<i32>,
+    Extension(pool): Extension<PgPool>,
+) -> Result<Json<Vec<Post>>, (StatusCode, Json<ErrorResponse>)> {
+    let posts = fetch_user_posts(id, &pool).await?;
+    Ok(Json(posts))
+}
+
+pub async fn get_current_user_posts(
+    auth_user: AuthUser,
+    Extension(pool): Extension<PgPool>,
+) -> Result<Json<Vec<Post>>, (StatusCode, Json<ErrorResponse>)> {
+    let posts = fetch_user_posts(auth_user.user_id, &pool).await?;
+    Ok(Json(posts))
+}
+
 pub async fn create_post(
     auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,

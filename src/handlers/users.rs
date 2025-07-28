@@ -73,6 +73,27 @@ pub async fn get_user(
     }
 }
 
+pub async fn get_current_user(
+    auth_user: AuthUser,
+    Extension(pool): Extension<PgPool>,
+) -> Result<Json<User>, (StatusCode, Json<ErrorResponse>)> {
+    let user = sqlx::query_as!(User, "SELECT * FROM users WHERE id = $1", auth_user.user_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Failed to fetch user from database".to_string(),
+                    message: "Failed to fetch user from database".to_string(),
+                    details: None,
+                }),
+            )
+        })?;
+
+    Ok(Json(user.unwrap()))
+}
+
 pub async fn create_user(
     Extension(pool): Extension<PgPool>,
     Json(user): Json<CreateUser>,
@@ -102,20 +123,9 @@ pub async fn create_user(
 pub async fn update_user(
     auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,
-    Path(id): Path<i32>,
     Json(user): Json<UpdateUser>,
 ) -> Result<Json<User>, (StatusCode, Json<ErrorResponse>)> {
-    if auth_user.user_id != id {
-        return Err((
-            StatusCode::FORBIDDEN,
-            Json(ErrorResponse {
-                error: "Failed to update user".to_string(),
-                message: "Failed to update user".to_string(),
-                details: None,
-            }),
-        ));
-    }
-    let user = sqlx::query_as!(User, "UPDATE users SET username = COALESCE($1, username), email = COALESCE($2, email) WHERE id = $3 RETURNING *", user.username, user.email, id)
+    let user = sqlx::query_as!(User, "UPDATE users SET username = COALESCE($1, username), email = COALESCE($2, email) WHERE id = $3 RETURNING *", user.username, user.email, auth_user.user_id)
         .fetch_one(&pool)
         .await
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse{
@@ -129,10 +139,10 @@ pub async fn update_user(
 }
 
 pub async fn delete_user(
+    auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,
-    Path(id): Path<i32>,
 ) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
-    let result = sqlx::query!("DELETE FROM users WHERE id = $1", id)
+    let result = sqlx::query!("DELETE FROM users WHERE id = $1", auth_user.user_id)
         .execute(&pool)
         .await
         .map_err(|_| {
@@ -151,12 +161,12 @@ pub async fn delete_user(
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
                 error: "User not found".to_string(),
-                message: format!("User with id {} not found", id),
+                message: format!("User with id {} not found", auth_user.user_id),
                 details: None,
             }),
         )),
         _ => Ok(Json(SuccessResponse {
-            message: format!("User with id {} successfully deleted", id),
+            message: format!("User with id {} successfully deleted", auth_user.user_id),
         })),
     }
 }

@@ -1,4 +1,7 @@
-use crate::handlers::posts::{create_post, delete_post, get_post, get_posts, update_post};
+use crate::handlers::posts::{
+    create_post, delete_post, get_current_user_posts, get_post, get_posts, get_user_posts,
+    update_post,
+};
 use axum::{
     Router,
     routing::{delete, get, post, put},
@@ -7,8 +10,10 @@ use axum::{
 pub fn posts_routes() -> Router {
     Router::new()
         .route("/posts", get(get_posts))
-        .route("/posts/{id}", get(get_post))
-        .route("/posts", post(create_post))
-        .route("/posts/{id}", put(update_post))
-        .route("/posts/{id}", delete(delete_post))
+        .route("/post/{id}", get(get_post))
+        .route("/post", post(create_post))
+        .route("/post/{id}", put(update_post))
+        .route("/post/{id}", delete(delete_post))
+        .route("/user/{id}/posts", get(get_user_posts))
+        .route("/user/posts", get(get_current_user_posts))
 }
