@@ -18,11 +18,11 @@ pub async fn get_posts(
     let posts = sqlx::query_as!(Post, "SELECT * FROM posts")
         .fetch_all(&pool)
         .await
-        .map_err(|_| {
+        .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: "Failed to fetch posts from database".to_string(),
+                    error: e.to_string(),
                     message: "Failed to fetch posts from database".to_string(),
                     details: None,
                 }),
@@ -49,11 +49,11 @@ pub async fn get_post(
     let post = sqlx::query_as!(Post, "SELECT * FROM posts WHERE id = $1", id)
         .fetch_optional(&pool)
         .await
-        .map_err(|_| {
+        .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: "Failed to fetch post from database".to_string(),
+                    error: e.to_string(),
                     message: "Failed to fetch post from database".to_string(),
                     details: None,
                 }),
@@ -80,11 +80,11 @@ async fn fetch_user_posts(
     let posts = sqlx::query_as!(Post, "SELECT * FROM posts WHERE user_id = $1", id)
         .fetch_all(pool)
         .await
-        .map_err(|_| {
+        .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: "Failed to fetch user posts from database".to_string(),
+                    error: e.to_string(),
                     message: "Failed to fetch user posts from database".to_string(),
                     details: None,
                 }),
@@ -134,11 +134,11 @@ pub async fn create_post(
     )
     .fetch_one(&pool)
     .await
-    .map_err(|_| {
+    .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Failed to create post".to_string(),
+                error: e.to_string(),
                 message: "Failed to create post".to_string(),
                 details: None,
             }),
@@ -174,8 +174,8 @@ pub async fn update_post(
     )
         .fetch_one(&pool)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse{
-            error: "Failed to update post".to_string(),
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse{
+            error: e.to_string(),
             message: "Failed to update post".to_string(),
             details: None,
         })))
@@ -193,7 +193,7 @@ pub async fn delete_post(
         return Err((
             StatusCode::UNAUTHORIZED,
             Json(ErrorResponse {
-                error: "Failed to delete post".to_string(),
+                error: "Unauthorized".to_string(),
                 message: "Failed to delete post".to_string(),
                 details: None,
             }),
@@ -203,11 +203,11 @@ pub async fn delete_post(
     let result = sqlx::query!("DELETE FROM posts WHERE id = $1", auth_user.user_id)
         .execute(&pool)
         .await
-        .map_err(|_| {
+        .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: "Failed to delete post".to_string(),
+                    error: e.to_string(),
                     message: "Failed to delete post".to_string(),
                     details: None,
                 }),
@@ -218,7 +218,7 @@ pub async fn delete_post(
         0 => Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
-                error: "Post not found".to_string(),
+                error: "Unauthorized".to_string(),
                 message: format!("Post with id {} not found", id),
                 details: None,
             }),

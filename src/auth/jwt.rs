@@ -66,8 +66,8 @@ pub fn generate_token(user_id: i32) -> Result<String, ErrorResponse> {
         &EncodingKey::from_secret(secret.as_ref()),
     )
     .map_err(|e| ErrorResponse {
-        error: "Failed to generate token".to_string(),
-        message: e.to_string(),
+        error: e.to_string(),
+        message: "Failed to generate token".to_string(),
         details: None,
     })
 }

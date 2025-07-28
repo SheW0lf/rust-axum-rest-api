@@ -18,11 +18,11 @@ pub async fn get_users(
     let users = sqlx::query_as!(User, "SELECT * FROM users")
         .fetch_all(&pool)
         .await
-        .map_err(|_| {
+        .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: "Failed to fetch users from database".to_string(),
+                    error: e.to_string(),
                     message: "Failed to fetch users from database".to_string(),
                     details: None,
                 }),
@@ -49,11 +49,11 @@ pub async fn get_user(
     let user = sqlx::query_as!(User, "SELECT * FROM users WHERE id = $1", id)
         .fetch_optional(&pool)
         .await
-        .map_err(|_| {
+        .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: "Failed to fetch user from database".to_string(),
+                    error: e.to_string(),
                     message: "Failed to fetch user from database".to_string(),
                     details: None,
                 }),
@@ -65,7 +65,7 @@ pub async fn get_user(
         None => Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
-                error: "User not found".to_string(),
+                error: "Unauthorized".to_string(),
                 message: format!("User with id {} not found", id),
                 details: None,
             }),
@@ -80,11 +80,11 @@ pub async fn get_current_user(
     let user = sqlx::query_as!(User, "SELECT * FROM users WHERE id = $1", auth_user.user_id)
         .fetch_optional(&pool)
         .await
-        .map_err(|_| {
+        .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: "Failed to fetch user from database".to_string(),
+                    error: e.to_string(),
                     message: "Failed to fetch user from database".to_string(),
                     details: None,
                 }),
@@ -106,11 +106,11 @@ pub async fn create_user(
     )
     .fetch_one(&pool)
     .await
-    .map_err(|_| {
+    .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Failed to create user".to_string(),
+                error: e.to_string(),
                 message: "Failed to create user".to_string(),
                 details: None,
             }),
@@ -128,8 +128,8 @@ pub async fn update_user(
     let user = sqlx::query_as!(User, "UPDATE users SET username = COALESCE($1, username), email = COALESCE($2, email) WHERE id = $3 RETURNING *", user.username, user.email, auth_user.user_id)
         .fetch_one(&pool)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse{
-            error: "Failed to update user".to_string(),
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse{
+            error: e.to_string(),
             message: "Failed to update user".to_string(),
             details: None,
         })))
@@ -145,11 +145,11 @@ pub async fn delete_user(
     let result = sqlx::query!("DELETE FROM users WHERE id = $1", auth_user.user_id)
         .execute(&pool)
         .await
-        .map_err(|_| {
+        .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: "Failed to delete user".to_string(),
+                    error: e.to_string(),
                     message: "Failed to delete user".to_string(),
                     details: None,
                 }),
@@ -160,7 +160,7 @@ pub async fn delete_user(
         0 => Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
-                error: "User not found".to_string(),
+                error: "Unauthorized".to_string(),
                 message: format!("User with id {} not found", auth_user.user_id),
                 details: None,
             }),
