@@ -1,6 +1,9 @@
-use crate::models::{
-    ErrorResponse, SuccessResponse,
-    posts::{CreatePost, Post, UpdatePost},
+use crate::{
+    auth::jwt::AuthUser,
+    models::{
+        ErrorResponse, SuccessResponse,
+        posts::{CreatePost, Post, UpdatePost},
+    },
 };
 use axum::{
     Json,
@@ -71,6 +74,7 @@ pub async fn get_post(
 }
 
 pub async fn create_post(
+    auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,
     Json(post): Json<CreatePost>,
 ) -> Result<Json<Post>, (StatusCode, Json<ErrorResponse>)> {
@@ -79,7 +83,7 @@ pub async fn create_post(
         "INSERT INTO posts (title, body, user_id) VALUES ($1, $2, $3) RETURNING *",
         post.title,
         post.body,
-        post.user_id
+        auth_user.user_id
     )
     .fetch_one(&pool)
     .await
@@ -98,16 +102,28 @@ pub async fn create_post(
 }
 
 pub async fn update_post(
+    auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,
     Path(id): Path<i32>,
     Json(post): Json<UpdatePost>,
 ) -> Result<Json<Post>, (StatusCode, Json<ErrorResponse>)> {
+    if auth_user.user_id != id {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(ErrorResponse {
+                error: "Failed to update post".to_string(),
+                message: "Failed to update post".to_string(),
+                details: None,
+            }),
+        ));
+    }
+
     let post = sqlx::query_as!(
         Post,
         "UPDATE posts SET title = COALESCE($1, title), body = COALESCE($2, body) WHERE id = $3 RETURNING *",
         post.title,
         post.body,
-        id
+        auth_user.user_id
     )
         .fetch_one(&pool)
         .await
@@ -122,10 +138,22 @@ pub async fn update_post(
 }
 
 pub async fn delete_post(
+    auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,
     Path(id): Path<i32>,
 ) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
-    let result = sqlx::query!("DELETE FROM posts WHERE id = $1", id)
+    if auth_user.user_id != id {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(ErrorResponse {
+                error: "Failed to delete post".to_string(),
+                message: "Failed to delete post".to_string(),
+                details: None,
+            }),
+        ));
+    }
+
+    let result = sqlx::query!("DELETE FROM posts WHERE id = $1", auth_user.user_id)
         .execute(&pool)
         .await
         .map_err(|_| {

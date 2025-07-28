@@ -1,6 +1,9 @@
-use crate::models::{
-    ErrorResponse, SuccessResponse,
-    users::{CreateUser, UpdateUser, User},
+use crate::{
+    auth::jwt::AuthUser,
+    models::{
+        ErrorResponse, SuccessResponse,
+        users::{CreateUser, UpdateUser, User},
+    },
 };
 use axum::{
     Json,
@@ -97,10 +100,21 @@ pub async fn create_user(
 }
 
 pub async fn update_user(
+    auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,
     Path(id): Path<i32>,
     Json(user): Json<UpdateUser>,
 ) -> Result<Json<User>, (StatusCode, Json<ErrorResponse>)> {
+    if auth_user.user_id != id {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(ErrorResponse {
+                error: "Failed to update user".to_string(),
+                message: "Failed to update user".to_string(),
+                details: None,
+            }),
+        ));
+    }
     let user = sqlx::query_as!(User, "UPDATE users SET username = COALESCE($1, username), email = COALESCE($2, email) WHERE id = $3 RETURNING *", user.username, user.email, id)
         .fetch_one(&pool)
         .await

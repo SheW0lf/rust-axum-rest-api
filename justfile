@@ -45,6 +45,9 @@ fmt-check:
 dev: db-up
     cargo run
 
+generate-jwt user_id:
+    cargo run --example generate_token {{user_id}}
+
 dev-watch: db-up
     cargo watch -x run
 
