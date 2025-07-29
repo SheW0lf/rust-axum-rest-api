@@ -43,7 +43,6 @@ where
     }
 }
 
-#[allow(dead_code)] // TODO: Remove this once we implement login functionality
 pub fn generate_token(user_id: i32) -> Result<String, ErrorResponse> {
     use jsonwebtoken::{EncodingKey, Header, encode};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -55,7 +54,7 @@ pub fn generate_token(user_id: i32) -> Result<String, ErrorResponse> {
 
     let claims = Claims {
         sub: user_id,
-        exp: now + 3600,
+        exp: now + 3600, // 1 hour
         iat: now,
     };
 

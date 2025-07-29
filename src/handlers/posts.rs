@@ -13,6 +13,7 @@ use axum::{
 use sqlx::PgPool;
 
 pub async fn get_posts(
+    _auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,
 ) -> Result<Json<Vec<Post>>, (StatusCode, Json<ErrorResponse>)> {
     let posts = sqlx::query_as!(Post, "SELECT * FROM posts")
@@ -43,6 +44,7 @@ pub async fn get_posts(
 }
 
 pub async fn get_post(
+    _auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,
     Path(id): Path<i32>,
 ) -> Result<Json<Post>, (StatusCode, Json<ErrorResponse>)> {
@@ -105,6 +107,7 @@ async fn fetch_user_posts(
 }
 
 pub async fn get_user_posts(
+    _auth_user: AuthUser,
     Path(id): Path<i32>,
     Extension(pool): Extension<PgPool>,
 ) -> Result<Json<Vec<Post>>, (StatusCode, Json<ErrorResponse>)> {

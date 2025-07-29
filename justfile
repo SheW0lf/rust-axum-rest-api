@@ -94,9 +94,10 @@ query:
 
 # Database seeding
 seed:
-    @echo "Running SQL seed files..."
-    @psql postgresql://postgres:password@localhost:5432/rust-axum-rest-api -f seeds/01_users.sql
-    @psql postgresql://postgres:password@localhost:5432/rust-axum-rest-api -f seeds/02_posts.sql
+    @echo "Seeding users with Rust script..."
+    cargo run --example seed_users
+    @echo "Seeding posts with Rust script..."
+    cargo run --example seed_posts
 
 # Full database setup (create + migrate + seed)
 setup: db-up
