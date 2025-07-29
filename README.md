@@ -8,7 +8,7 @@ A fun test project exploring Rust web development with the Axum framework. This 
 ## Features
 
 - **Fast & Efficient**: Built with Rust and Axum for exceptional performance
-- **JWT Authentication**: Secure token-based authentication system
+- **JWT Authentication**: Secure token-based authentication with bcrypt password hashing
 - **Database Integration**: PostgreSQL with SQLx for type-safe database operations
 - **Migration System**: Database schema management with SQLx migrations
 - **Logging**: Structured logging with tracing and tracing-subscriber
@@ -16,12 +16,14 @@ A fun test project exploring Rust web development with the Axum framework. This 
 - **Docker Support**: Containerized deployment with Docker Compose
 - **Modern Tooling**: Justfile for common development tasks
 - **Type Safety**: Leverages Rust's type system for compile-time guarantees
+- **Rust Seeding**: Type-safe database seeding with readable scripts
 
 ## Tech Stack
 
 - **Framework**: [Axum](https://github.com/tokio-rs/axum) - Fast, ergonomic web framework
 - **Database**: PostgreSQL with [SQLx](https://github.com/launchbadge/sqlx) - Async SQL toolkit
 - **Authentication**: [jsonwebtoken](https://github.com/Keats/jsonwebtoken) - JWT token handling
+- **Password Hashing**: [bcrypt](https://github.com/Keats/rust-bcrypt) - Secure password hashing
 - **Runtime**: [Tokio](https://tokio.rs/) - Async runtime
 - **Serialization**: [Serde](https://serde.rs/) - Serialization framework
 - **Logging**: [Tracing](https://tracing.rs/) - Application-level tracing
@@ -83,6 +85,27 @@ For containerized development:
 docker-compose up --build
 ```
 
+## Authentication
+
+This API uses **JWT (JSON Web Tokens)** for authentication with bcrypt-hashed passwords. Tokens expire after 1 hour.
+
+### Test Users
+
+The seeded database includes these test users:
+
+| Username     | Email             | Password       |
+| ------------ | ----------------- | -------------- |
+| `john_doe`   | john@example.com  | `password123`  |
+| `jane_smith` | jane@example.com  | `password123`  |
+| `admin`      | admin@example.com | `admin_secure` |
+
+### Authentication Flow
+
+1. **Register**: Create a new user account
+2. **Login**: Get a JWT token using username/password
+3. **Use Token**: Include token in `Authorization: Bearer <token>` header
+4. **Protected Routes**: Access user data and posts
+
 ## Development
 
 ### Available Commands
@@ -128,32 +151,46 @@ docker-compose up --build
 
 - `GET /` - Health check with database status
 
-### Authentication
+### Authentication Endpoints
 
-Most user and post endpoints require JWT authentication. Include the token in the Authorization header:
+- `POST /auth/login` - Login with username/password (returns JWT token)
+- `POST /auth/logout` - Logout (requires auth token)
+
+### User Endpoints
+
+| Method   | Endpoint      | Auth Required | Description              |
+| -------- | ------------- | ------------- | ------------------------ |
+| `POST`   | `/user`       | ❌            | Register new user        |
+| `GET`    | `/users`      | ✅            | Get all users            |
+| `GET`    | `/users/{id}` | ✅            | Get user by ID           |
+| `GET`    | `/user`       | ✅            | Get current user profile |
+| `PUT`    | `/user`       | ✅            | Update current user      |
+| `DELETE` | `/user`       | ✅            | Delete current user      |
+
+### Post Endpoints
+
+| Method   | Endpoint           | Auth Required | Description              |
+| -------- | ------------------ | ------------- | ------------------------ |
+| `GET`    | `/posts`           | ✅            | Get all posts            |
+| `GET`    | `/post/{id}`       | ✅            | Get post by ID           |
+| `POST`   | `/post`            | ✅            | Create new post          |
+| `PUT`    | `/post/{id}`       | ✅            | Update post (owner only) |
+| `DELETE` | `/post/{id}`       | ✅            | Delete post (owner only) |
+| `GET`    | `/user/{id}/posts` | ✅            | Get posts by user ID     |
+| `GET`    | `/user/posts`      | ✅            | Get current user's posts |
+
+### Authentication Headers
+
+For protected endpoints, include the JWT token:
 
 ```
 Authorization: Bearer <your-jwt-token>
 ```
 
-### User Endpoints
+**Error Responses:**
 
-- `GET /users` - Get all users
-- `GET /users/{id}` - Get user by ID
-- `POST /user` - Create new user
-- `GET /user` - Get current user (requires auth)
-- `PUT /user` - Update current user (requires auth)
-- `DELETE /user` - Delete current user (requires auth)
-
-### Post Endpoints
-
-- `GET /posts` - Get all posts
-- `GET /post/{id}` - Get post by ID
-- `POST /post` - Create new post (requires auth)
-- `PUT /post/{id}` - Update post (requires auth)
-- `DELETE /post/{id}` - Delete post (requires auth)
-- `GET /user/{id}/posts` - Get posts by user ID
-- `GET /user/posts` - Get current user's posts (requires auth)
+- `401 Unauthorized` - Missing, invalid, or expired token
+- `403 Forbidden` - Valid token but insufficient permissions
 
 ## License
 
