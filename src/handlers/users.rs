@@ -254,7 +254,8 @@ pub async fn login(
         ));
     }
 
-    let access_token = generate_token(user.id).map_err(|e| {
+    let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let access_token = generate_token(user.id, &jwt_secret).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
@@ -343,7 +344,8 @@ pub async fn refresh(
             )
         })?;
 
-    let access_token = generate_token(record.user_id).map_err(|e| {
+    let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let access_token = generate_token(record.user_id, &jwt_secret).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {

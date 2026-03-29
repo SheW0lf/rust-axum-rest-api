@@ -44,7 +44,7 @@ where
     }
 }
 
-pub fn generate_token(user_id: i32) -> Result<String, ErrorResponse> {
+pub fn generate_token(user_id: i32, secret: &str) -> Result<String, ErrorResponse> {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -56,7 +56,6 @@ pub fn generate_token(user_id: i32) -> Result<String, ErrorResponse> {
         iat: now,
     };
 
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
     encode(
         &Header::default(),
         &claims,
@@ -79,4 +78,61 @@ pub fn generate_refresh_token() -> (String, String) {
 
 pub fn hash_token(token: &str) -> String {
     format!("{:x}", Sha256::digest(token.as_bytes()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hash_token_is_deterministic() {
+        assert_eq!(hash_token("abc"), hash_token("abc"));
+    }
+
+    #[test]
+    fn hash_token_produces_64_char_hex() {
+        let hash = hash_token("some-token");
+        assert_eq!(hash.len(), 64);
+        assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn hash_token_differs_for_different_inputs() {
+        assert_ne!(hash_token("a"), hash_token("b"));
+    }
+
+    #[test]
+    fn generate_refresh_token_plaintext_is_64_char_hex() {
+        let (plaintext, _) = generate_refresh_token();
+        assert_eq!(plaintext.len(), 64);
+        assert!(plaintext.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn generate_refresh_token_hash_matches_plaintext() {
+        let (plaintext, hash) = generate_refresh_token();
+        assert_eq!(hash, hash_token(&plaintext));
+    }
+
+    #[test]
+    fn generate_refresh_token_is_random() {
+        let (p1, _) = generate_refresh_token();
+        let (p2, _) = generate_refresh_token();
+        assert_ne!(p1, p2);
+    }
+
+    #[test]
+    fn generate_token_round_trips() {
+        let token = generate_token(42, "test-secret").expect("token generation failed");
+        assert!(!token.is_empty());
+
+        let decoded = jsonwebtoken::decode::<crate::auth::claims::Claims>(
+            &token,
+            &jsonwebtoken::DecodingKey::from_secret(b"test-secret"),
+            &jsonwebtoken::Validation::default(),
+        )
+        .expect("token decode failed");
+
+        assert_eq!(decoded.claims.sub, 42);
+    }
 }

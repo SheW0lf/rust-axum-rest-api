@@ -81,3 +81,58 @@ impl User {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn make_user(password_hash: Option<String>) -> User {
+        User {
+            id: 1,
+            username: "testuser".to_string(),
+            email: "test@example.com".to_string(),
+            created_at: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
+            password_hash,
+        }
+    }
+
+    #[test]
+    fn hash_password_produces_verifiable_hash() {
+        let hash = User::hash_password("secret").unwrap();
+        assert!(bcrypt::verify("secret", &hash).unwrap());
+    }
+
+    #[test]
+    fn hash_password_is_not_plaintext() {
+        let hash = User::hash_password("secret").unwrap();
+        assert_ne!(hash, "secret");
+    }
+
+    #[test]
+    fn verify_password_correct() {
+        let hash = User::hash_password("hunter2").unwrap();
+        let user = make_user(Some(hash));
+        assert!(user.verify_password("hunter2"));
+    }
+
+    #[test]
+    fn verify_password_wrong() {
+        let hash = User::hash_password("hunter2").unwrap();
+        let user = make_user(Some(hash));
+        assert!(!user.verify_password("wrong"));
+    }
+
+    #[test]
+    fn verify_password_no_hash() {
+        let user = make_user(None);
+        assert!(!user.verify_password("anything"));
+    }
+
+    #[test]
+    fn user_safe_from_user() {
+        let user = make_user(Some("hash".to_string()));
+        let safe = UserSafe::from(user);
+        assert_eq!(safe.id, 1);
+        assert_eq!(safe.username, "testuser");
+        assert_eq!(safe.email, "test@example.com");
+    }
+}

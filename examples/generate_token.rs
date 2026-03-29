@@ -9,7 +9,8 @@ fn main() {
         .and_then(|id| id.parse::<i32>().ok())
         .unwrap_or(1);
 
-    match generate_token(user_id) {
+    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    match generate_token(user_id, &secret) {
         Ok(token) => println!("{}", token),
         Err(e) => println!("Error: {}", e.error),
     }
