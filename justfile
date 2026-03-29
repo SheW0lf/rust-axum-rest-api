@@ -75,9 +75,13 @@ db-reset-sqlx: db-down
     sqlx database drop
     sqlx database create
 
+prepare: db-up
+    cargo sqlx prepare -- --all-targets
+
 # SQLx migrations
 migrate: db-up
     sqlx migrate run
+    cargo sqlx prepare -- --all-targets
 
 migrate-revert:
     sqlx migrate revert

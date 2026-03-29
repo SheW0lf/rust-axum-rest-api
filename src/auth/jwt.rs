@@ -3,7 +3,10 @@ use axum::{
     extract::FromRequestParts,
     http::{StatusCode, request::Parts},
 };
-use jsonwebtoken::{DecodingKey, Validation, decode};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use rand::RngCore;
+use sha2::{Digest, Sha256};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
 pub struct AuthUser {
@@ -44,9 +47,6 @@ where
 }
 
 pub fn generate_token(user_id: i32) -> Result<String, ErrorResponse> {
-    use jsonwebtoken::{EncodingKey, Header, encode};
-    use std::time::{SystemTime, UNIX_EPOCH};
-
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -54,7 +54,7 @@ pub fn generate_token(user_id: i32) -> Result<String, ErrorResponse> {
 
     let claims = Claims {
         sub: user_id,
-        exp: now + 3600, // 1 hour
+        exp: now + 900, // 15 minutes
         iat: now,
     };
 
@@ -69,4 +69,16 @@ pub fn generate_token(user_id: i32) -> Result<String, ErrorResponse> {
         message: "Failed to generate token".to_string(),
         details: None,
     })
+}
+
+pub fn generate_refresh_token() -> (String, String) {
+    let mut bytes = [0u8; 32]; // array of 32 0's (unsigned 8-bit integers for memory). 
+    rand::thread_rng().fill_bytes(&mut bytes); //fill_bytes fills the bytes array with random u8 bytes (0 - 255) but we have to initialize it first and then overwrite it because Rust requires memory to be initialized before use.
+    let plaintext: String = bytes.iter().map(|b| format!("{:02x}", b)).collect(); // formats each byte as a 2-character hexadecimal (02 for char and x for hex) string and at the end combines (collect) them into a single string.
+    let hash = hash_token(&plaintext); // hashes our hex string into a 64-character hexadecimal string.
+    (plaintext, hash) // returns the plaintext and hash as a tuple.
+}
+
+pub fn hash_token(token: &str) -> String {
+    format!("{:x}", Sha256::digest(token.as_bytes()))
 }

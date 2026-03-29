@@ -1,8 +1,11 @@
 use crate::{
-    auth::jwt::{AuthUser, generate_token},
+    auth::jwt::{AuthUser, generate_refresh_token, generate_token, hash_token},
     models::{
         ErrorResponse, SuccessResponse,
-        users::{CreateUser, LoginRequest, LoginResponse, UpdateUser, User, UserSafe},
+        users::{
+            CreateUser, LoginRequest, LoginResponse, RefreshRequest, RefreshResponse, UpdateUser,
+            User, UserSafe,
+        },
     },
 };
 use axum::{
@@ -74,7 +77,7 @@ pub async fn get_user(
         None => Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
-                error: "Unauthorized".to_string(),
+                error: "User not found".to_string(),
                 message: format!("User with id {} not found", id),
                 details: None,
             }),
@@ -240,7 +243,7 @@ pub async fn login(
         ));
     }
 
-    let token = generate_token(user.id).map_err(|e| {
+    let access_token = generate_token(user.id).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
@@ -251,17 +254,146 @@ pub async fn login(
         )
     })?;
 
+    let (refresh_plaintext, refresh_hash) = generate_refresh_token();
+    let expires_at = chrono::Utc::now().naive_utc() + chrono::Duration::days(7);
+
+    sqlx::query!(
+        "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
+        user.id,
+        refresh_hash,
+        expires_at,
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: e.to_string(),
+                message: "Failed to store refresh token".to_string(),
+                details: None,
+            }),
+        )
+    })?;
+
     Ok(Json(LoginResponse {
-        token,
+        access_token,
+        refresh_token: refresh_plaintext,
         user: user.into(),
     }))
 }
 
+pub async fn refresh(
+    Extension(pool): Extension<PgPool>,
+    Json(body): Json<RefreshRequest>,
+) -> Result<Json<RefreshResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let token_hash = hash_token(&body.refresh_token);
+    let now = chrono::Utc::now().naive_utc();
+
+    let record = sqlx::query!(
+        "SELECT id, user_id FROM refresh_tokens WHERE token_hash = $1 AND expires_at > $2",
+        token_hash,
+        now,
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: e.to_string(),
+                message: "Database error".to_string(),
+                details: None,
+            }),
+        )
+    })?
+    .ok_or_else(|| {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(ErrorResponse {
+                error: "Invalid or expired refresh token".to_string(),
+                message: "Please log in again".to_string(),
+                details: None,
+            }),
+        )
+    })?;
+
+    sqlx::query!("DELETE FROM refresh_tokens WHERE id = $1", record.id)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: e.to_string(),
+                    message: "Failed to rotate refresh token".to_string(),
+                    details: None,
+                }),
+            )
+        })?;
+
+    let access_token = generate_token(record.user_id).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: e.error,
+                message: e.message,
+                details: e.details,
+            }),
+        )
+    })?;
+
+    let (refresh_plaintext, refresh_hash) = generate_refresh_token();
+    let expires_at = chrono::Utc::now().naive_utc() + chrono::Duration::days(7);
+
+    sqlx::query!(
+        "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
+        record.user_id,
+        refresh_hash,
+        expires_at,
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: e.to_string(),
+                message: "Failed to store refresh token".to_string(),
+                details: None,
+            }),
+        )
+    })?;
+
+    Ok(Json(RefreshResponse {
+        access_token,
+        refresh_token: refresh_plaintext,
+    }))
+}
+
 pub async fn logout(
-    _auth_user: AuthUser,
+    Extension(pool): Extension<PgPool>,
+    Json(body): Json<RefreshRequest>,
 ) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
-    // Since JWT is stateless, we just return success
-    // In a real app, you might maintain a blacklist of tokens
+    let token_hash = hash_token(&body.refresh_token);
+
+    sqlx::query!(
+        "DELETE FROM refresh_tokens WHERE token_hash = $1",
+        token_hash,
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: e.to_string(),
+                message: "Failed to revoke refresh token".to_string(),
+                details: None,
+            }),
+        )
+    })?;
+
     Ok(Json(SuccessResponse {
         message: "Successfully logged out".to_string(),
     }))

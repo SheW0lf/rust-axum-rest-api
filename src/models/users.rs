@@ -33,8 +33,20 @@ pub struct LoginRequest {
 
 #[derive(Serialize)]
 pub struct LoginResponse {
-    pub token: String,
+    pub access_token: String,
+    pub refresh_token: String,
     pub user: UserSafe,
+}
+
+#[derive(Deserialize)]
+pub struct RefreshRequest {
+    pub refresh_token: String,
+}
+
+#[derive(Serialize)]
+pub struct RefreshResponse {
+    pub access_token: String,
+    pub refresh_token: String,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
