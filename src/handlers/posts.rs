@@ -68,7 +68,7 @@ pub async fn get_post(
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
                 error: "Post not found".to_string(),
-                message: format!("Post with id {} not found", id),
+                message: format!("Post with id {id} not found"),
                 details: None,
             }),
         )),
@@ -157,32 +157,36 @@ pub async fn update_post(
     Path(id): Path<i32>,
     Json(post): Json<UpdatePost>,
 ) -> Result<Json<Post>, (StatusCode, Json<ErrorResponse>)> {
-    if auth_user.user_id != id {
-        return Err((
-            StatusCode::UNAUTHORIZED,
+    let post = sqlx::query_as!(
+        Post,
+        "UPDATE posts SET title = COALESCE($1, title), body = COALESCE($2, body) WHERE id = $3 AND user_id = $4 RETURNING *",
+        post.title,
+        post.body,
+        id,
+        auth_user.user_id
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Failed to update post".to_string(),
+                error: e.to_string(),
                 message: "Failed to update post".to_string(),
                 details: None,
             }),
-        ));
-    }
-
-    let post = sqlx::query_as!(
-        Post,
-        "UPDATE posts SET title = COALESCE($1, title), body = COALESCE($2, body) WHERE id = $3 RETURNING *",
-        post.title,
-        post.body,
-        auth_user.user_id
-    )
-        .fetch_one(&pool)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse{
-            error: e.to_string(),
-            message: "Failed to update post".to_string(),
-            details: None,
-        })))
-        ?;
+        )
+    })?
+    .ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Post not found or unauthorized".to_string(),
+                message: format!("Post with id {id} not found or you don't have permission to update it"),
+                details: None,
+            }),
+        )
+    })?;
 
     Ok(Json(post))
 }
@@ -192,42 +196,35 @@ pub async fn delete_post(
     Extension(pool): Extension<PgPool>,
     Path(id): Path<i32>,
 ) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
-    if auth_user.user_id != id {
-        return Err((
-            StatusCode::UNAUTHORIZED,
+    let result = sqlx::query!(
+        "DELETE FROM posts WHERE id = $1 AND user_id = $2",
+        id,
+        auth_user.user_id
+    )
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Unauthorized".to_string(),
+                error: e.to_string(),
                 message: "Failed to delete post".to_string(),
                 details: None,
             }),
-        ));
-    }
-
-    let result = sqlx::query!("DELETE FROM posts WHERE id = $1", auth_user.user_id)
-        .execute(&pool)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: e.to_string(),
-                    message: "Failed to delete post".to_string(),
-                    details: None,
-                }),
-            )
-        })?;
+        )
+    })?;
 
     match result.rows_affected() {
         0 => Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
-                error: "Unauthorized".to_string(),
-                message: format!("Post with id {} not found", id),
+                error: "Post not found or unauthorized".to_string(),
+                message: format!("Post with id {id} not found or you don't have permission to delete it"),
                 details: None,
             }),
         )),
         _ => Ok(Json(SuccessResponse {
-            message: format!("Post with id {} successfully deleted", id),
+            message: format!("Post with id {id} successfully deleted"),
         })),
     }
 }

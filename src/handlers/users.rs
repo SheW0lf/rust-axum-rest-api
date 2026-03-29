@@ -78,7 +78,7 @@ pub async fn get_user(
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
                 error: "User not found".to_string(),
-                message: format!("User with id {} not found", id),
+                message: format!("User with id {id} not found"),
                 details: None,
             }),
         )),
@@ -107,7 +107,18 @@ pub async fn get_current_user(
         )
     })?;
 
-    Ok(Json(user.unwrap()))
+    let user = user.ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "User not found".to_string(),
+                message: "Authenticated user not found".to_string(),
+                details: None,
+            }),
+        )
+    })?;
+
+    Ok(Json(user))
 }
 
 pub async fn create_user(

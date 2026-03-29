@@ -15,7 +15,6 @@ pub struct Post {
 pub struct CreatePost {
     pub title: String,
     pub body: String,
-    pub user_id: i32,
 }
 
 #[derive(Serialize, Deserialize)]

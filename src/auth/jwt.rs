@@ -19,30 +19,28 @@ where
 {
     type Rejection = StatusCode;
 
-    fn from_request_parts(
+    async fn from_request_parts(
         parts: &mut Parts,
         _state: &S,
-    ) -> impl std::future::Future<Output = Result<Self, Self::Rejection>> + Send {
-        async move {
-            let auth_header = parts
-                .headers
-                .get("Authorization")
-                .and_then(|h| h.to_str().ok())
-                .and_then(|h| h.strip_prefix("Bearer "))
-                .ok_or(StatusCode::UNAUTHORIZED)?;
+    ) -> Result<Self, Self::Rejection> {
+        let auth_header = parts
+            .headers
+            .get("Authorization")
+            .and_then(|h| h.to_str().ok())
+            .and_then(|h| h.strip_prefix("Bearer "))
+            .ok_or(StatusCode::UNAUTHORIZED)?;
 
-            let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-            let token_data = decode::<Claims>(
-                auth_header,
-                &DecodingKey::from_secret(secret.as_ref()),
-                &Validation::default(),
-            )
-            .map_err(|_| StatusCode::UNAUTHORIZED)?;
+        let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+        let token_data = decode::<Claims>(
+            auth_header,
+            &DecodingKey::from_secret(secret.as_ref()),
+            &Validation::default(),
+        )
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
-            Ok(AuthUser {
-                user_id: token_data.claims.sub,
-            })
-        }
+        Ok(AuthUser {
+            user_id: token_data.claims.sub,
+        })
     }
 }
 
@@ -74,7 +72,7 @@ pub fn generate_token(user_id: i32) -> Result<String, ErrorResponse> {
 pub fn generate_refresh_token() -> (String, String) {
     let mut bytes = [0u8; 32]; // array of 32 0's (unsigned 8-bit integers for memory). 
     rand::thread_rng().fill_bytes(&mut bytes); //fill_bytes fills the bytes array with random u8 bytes (0 - 255) but we have to initialize it first and then overwrite it because Rust requires memory to be initialized before use.
-    let plaintext: String = bytes.iter().map(|b| format!("{:02x}", b)).collect(); // formats each byte as a 2-character hexadecimal (02 for char and x for hex) string and at the end combines (collect) them into a single string.
+    let plaintext: String = bytes.iter().map(|b| format!("{b:02x}")).collect(); // formats each byte as a 2-character hexadecimal (02 for char and x for hex) string and at the end combines (collect) them into a single string.
     let hash = hash_token(&plaintext); // hashes our hex string into a 64-character hexadecimal string.
     (plaintext, hash) // returns the plaintext and hash as a tuple.
 }

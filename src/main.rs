@@ -9,7 +9,6 @@ use serde_json::json;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 use tracing::{Level, info};
-use tracing_subscriber;
 
 async fn root(Extension(pool): Extension<PgPool>) -> impl IntoResponse {
     let db_status = match sqlx::query("SELECT 1").fetch_one(&pool).await {
@@ -34,8 +33,8 @@ async fn main() -> Result<(), sqlx::Error> {
     info!("Starting the server");
 
     dotenv().ok();
-    let database_url: String = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool: sqlx::Pool<sqlx::Postgres> = PgPoolOptions::new()
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let pool: PgPool = PgPoolOptions::new()
         .connect(&database_url)
         .await
         .expect("Failed to connect to the database");

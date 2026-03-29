@@ -1,4 +1,3 @@
-use dotenvy;
 use sqlx::PgPool;
 
 #[tokio::main]

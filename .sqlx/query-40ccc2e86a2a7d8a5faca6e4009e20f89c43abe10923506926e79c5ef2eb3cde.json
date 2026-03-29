@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE posts SET title = COALESCE($1, title), body = COALESCE($2, body) WHERE id = $3 RETURNING *",
+  "query": "UPDATE posts SET title = COALESCE($1, title), body = COALESCE($2, body) WHERE id = $3 AND user_id = $4 RETURNING *",
   "describe": {
     "columns": [
       {
@@ -33,6 +33,7 @@
       "Left": [
         "Text",
         "Text",
+        "Int4",
         "Int4"
       ]
     },
@@ -44,5 +45,5 @@
       false
     ]
   },
-  "hash": "bd3de539031cd91eedcfebd4b2bd45febb4fa30759c16a03e33f17ef6d48056a"
+  "hash": "40ccc2e86a2a7d8a5faca6e4009e20f89c43abe10923506926e79c5ef2eb3cde"
 }

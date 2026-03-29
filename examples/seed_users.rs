@@ -1,4 +1,3 @@
-use dotenvy;
 use rust_axum_rest_api::models::users::User;
 use sqlx::PgPool;
 
