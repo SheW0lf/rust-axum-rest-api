@@ -17,6 +17,7 @@ A fun test project exploring Rust web development with the Axum framework. This 
 - **Modern Tooling**: Justfile for common development tasks
 - **Type Safety**: Leverages Rust's type system for compile-time guarantees
 - **Rust Seeding**: Type-safe database seeding with readable scripts
+- **Testing**: Unit tests for pure logic, integration tests with isolated per-test databases via `sqlx::test`
 
 ## Tech Stack
 
@@ -32,6 +33,7 @@ A fun test project exploring Rust web development with the Axum framework. This 
 - **Environment**: [Dotenvy](https://github.com/allan2/dotenvy) - Environment variable loader
 - **DateTime**: [Chrono](https://github.com/chronotope/chrono) - Date and time handling
 - **Containerization**: Docker & Docker Compose
+- **Testing**: [axum-test](https://github.com/JosephLenton/axum-test) - In-process HTTP test client for Axum
 
 ## Getting Started
 
@@ -128,7 +130,9 @@ The seeded database includes these test users:
 - `just build` - Build the project
 - `just build-release` - Build optimized release version
 - `just check` - Check code without building
-- `just test` - Run tests
+- `just test` - Run all tests (unit + integration)
+- `just test-unit` - Run unit tests only (no database required)
+- `just test-integration` - Run integration tests (requires database)
 - `just test-watch` - Run tests in watch mode
 
 **Code Quality:**
