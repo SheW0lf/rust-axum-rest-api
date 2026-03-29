@@ -29,8 +29,14 @@ check:
 test:
     cargo test
 
+test-unit:
+    cargo test --lib
+
+test-integration: db-up
+    JWT_SECRET=test-secret cargo test --test '*'
+
 test-watch:
-    cargo test --watch
+    cargo watch -x test
 
 clippy:
     cargo clippy
