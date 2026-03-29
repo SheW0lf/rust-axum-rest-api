@@ -8,7 +8,7 @@ A fun test project exploring Rust web development with the Axum framework. This 
 ## Features
 
 - **Fast & Efficient**: Built with Rust and Axum for exceptional performance
-- **JWT Authentication**: Secure token-based authentication with bcrypt password hashing
+- **JWT Authentication**: Secure token-based authentication with short-lived access tokens, rotating refresh tokens, and bcrypt password hashing
 - **Database Integration**: PostgreSQL with SQLx for type-safe database operations
 - **Migration System**: Database schema management with SQLx migrations
 - **Logging**: Structured logging with tracing and tracing-subscriber
@@ -24,6 +24,8 @@ A fun test project exploring Rust web development with the Axum framework. This 
 - **Database**: PostgreSQL with [SQLx](https://github.com/launchbadge/sqlx) - Async SQL toolkit
 - **Authentication**: [jsonwebtoken](https://github.com/Keats/jsonwebtoken) - JWT token handling
 - **Password Hashing**: [bcrypt](https://github.com/Keats/rust-bcrypt) - Secure password hashing
+- **Token Hashing**: [sha2](https://github.com/RustCrypto/hashes) - SHA-256 hashing for refresh tokens
+- **Randomness**: [rand](https://github.com/rust-random/rand) - Cryptographically secure token generation
 - **Runtime**: [Tokio](https://tokio.rs/) - Async runtime
 - **Serialization**: [Serde](https://serde.rs/) - Serialization framework
 - **Logging**: [Tracing](https://tracing.rs/) - Application-level tracing
@@ -87,7 +89,11 @@ docker-compose up --build
 
 ## Authentication
 
-This API uses **JWT (JSON Web Tokens)** for authentication with bcrypt-hashed passwords. Tokens expire after 1 hour.
+This API uses **JWT (JSON Web Tokens)** for authentication with bcrypt-hashed passwords.
+
+- **Access tokens** expire after **15 minutes**
+- **Refresh tokens** expire after **7 days** and are rotated on every use (one-time use)
+- Refresh tokens are stored as SHA-256 hashes; only the plaintext is returned to the client
 
 ### Test Users
 
@@ -102,9 +108,10 @@ The seeded database includes these test users:
 ### Authentication Flow
 
 1. **Register**: Create a new user account
-2. **Login**: Get a JWT token using username/password
-3. **Use Token**: Include token in `Authorization: Bearer <token>` header
-4. **Protected Routes**: Access user data and posts
+2. **Login**: Receive a short-lived access token and a long-lived refresh token
+3. **Use Access Token**: Include in `Authorization: Bearer <access_token>` header for protected routes
+4. **Refresh**: Exchange a valid refresh token for a new access token and rotated refresh token
+5. **Logout**: Revoke the refresh token via `Authorization: Bearer <refresh_token>` header
 
 ## Development
 
@@ -153,8 +160,9 @@ The seeded database includes these test users:
 
 ### Authentication Endpoints
 
-- `POST /auth/login` - Login with username/password (returns JWT token)
-- `POST /auth/logout` - Logout (requires auth token)
+- `POST /auth/login` - Login with username/password (returns access token + refresh token)
+- `POST /auth/refresh` - Exchange refresh token for a new access token + rotated refresh token
+- `POST /auth/logout` - Revoke refresh token (`Authorization: Bearer <refresh_token>`)
 
 ### User Endpoints
 
@@ -181,10 +189,16 @@ The seeded database includes these test users:
 
 ### Authentication Headers
 
-For protected endpoints, include the JWT token:
+For protected endpoints, include the access token:
 
 ```
-Authorization: Bearer <your-jwt-token>
+Authorization: Bearer <access_token>
+```
+
+For logout, include the refresh token instead:
+
+```
+Authorization: Bearer <refresh_token>
 ```
 
 **Error Responses:**

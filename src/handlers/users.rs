@@ -11,7 +11,7 @@ use crate::{
 use axum::{
     Json,
     extract::{Extension, Path},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
 };
 use sqlx::PgPool;
 
@@ -373,9 +373,22 @@ pub async fn refresh(
 
 pub async fn logout(
     Extension(pool): Extension<PgPool>,
-    Json(body): Json<RefreshRequest>,
+    headers: HeaderMap,
 ) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
-    let token_hash = hash_token(&body.refresh_token);
+    let refresh_token = headers
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "))
+        .ok_or((
+            StatusCode::UNAUTHORIZED,
+            Json(ErrorResponse {
+                error: "Missing or invalid Authorization header".to_string(),
+                message: "Authorization header with Bearer token required".to_string(),
+                details: None,
+            }),
+        ))?;
+
+    let token_hash = hash_token(refresh_token);
 
     sqlx::query!(
         "DELETE FROM refresh_tokens WHERE token_hash = $1",
