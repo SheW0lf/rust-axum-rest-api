@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM posts",
+  "query": "SELECT * FROM posts ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -40,5 +40,5 @@
       false
     ]
   },
-  "hash": "4f17c842c8407460631eca641dd51a5700463ba3d51a440c4fdaef2b9b9a87fe"
+  "hash": "c9925708c793670fbf51b95672c316147bcb4f8fbbb0a349d242a43880bd6741"
 }

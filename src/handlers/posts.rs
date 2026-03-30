@@ -16,7 +16,7 @@ pub async fn get_posts(
     _auth_user: AuthUser,
     Extension(pool): Extension<PgPool>,
 ) -> Result<Json<Vec<Post>>, (StatusCode, Json<ErrorResponse>)> {
-    let posts = sqlx::query_as!(Post, "SELECT * FROM posts")
+    let posts = sqlx::query_as!(Post, "SELECT * FROM posts ORDER BY created_at DESC")
         .fetch_all(&pool)
         .await
         .map_err(|e| {
@@ -30,17 +30,7 @@ pub async fn get_posts(
             )
         })?;
 
-    match posts.len() {
-        0 => Err((
-            StatusCode::NOT_FOUND,
-            Json(ErrorResponse {
-                error: "No posts found".to_string(),
-                message: "No posts found".to_string(),
-                details: None,
-            }),
-        )),
-        _ => Ok(Json(posts)),
-    }
+    Ok(Json(posts))
 }
 
 pub async fn get_post(
@@ -79,31 +69,25 @@ async fn fetch_user_posts(
     id: i32,
     pool: &PgPool,
 ) -> Result<Vec<Post>, (StatusCode, Json<ErrorResponse>)> {
-    let posts = sqlx::query_as!(Post, "SELECT * FROM posts WHERE user_id = $1", id)
-        .fetch_all(pool)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: e.to_string(),
-                    message: "Failed to fetch user posts from database".to_string(),
-                    details: None,
-                }),
-            )
-        })?;
-
-    match posts.len() {
-        0 => Err((
-            StatusCode::NOT_FOUND,
+    let posts = sqlx::query_as!(
+        Post,
+        "SELECT * FROM posts WHERE user_id = $1 ORDER BY created_at DESC",
+        id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "No posts found".to_string(),
-                message: "No posts found".to_string(),
+                error: e.to_string(),
+                message: "Failed to fetch user posts from database".to_string(),
                 details: None,
             }),
-        )),
-        _ => Ok(posts),
-    }
+        )
+    })?;
+
+    Ok(posts)
 }
 
 pub async fn get_user_posts(

@@ -36,17 +36,7 @@ pub async fn get_users(
         )
     })?;
 
-    match users.len() {
-        0 => Err((
-            StatusCode::NOT_FOUND,
-            Json(ErrorResponse {
-                error: "No users found".to_string(),
-                message: "No users found".to_string(),
-                details: None,
-            }),
-        )),
-        _ => Ok(Json(users)),
-    }
+    Ok(Json(users))
 }
 
 pub async fn get_user(
